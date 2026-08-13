@@ -19,7 +19,7 @@
     "migrate:up": "tsx src/database/migrations.ts up",
     "migrate:down": "tsx src/database/migrations.ts down",
     "migrate:create": "tsx src/database/migrations.ts create",
-    "ingest:dadosgovbr": "tsx src/services/ingester/datasources/dadosGovBr.ts"
+    "ingest:ibge": "tsx src/services/ingester/datasources/ibgeMunicipios.ts"
   },
   "dependencies": {
     "fastify": "^5.11.3",

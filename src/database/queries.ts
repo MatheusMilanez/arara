@@ -1,5 +1,81 @@
 import { pool } from './client.js';
-import type { Document } from '../types/document.js';
+import type { Dataset, Document } from '../types/document.js';
+
+interface DatasetRow {
+  id: string;
+  source: string;
+  name: string;
+  description: string | null;
+  schema: Record<string, unknown> | null;
+  row_count: string | null;
+  indexed_at: Date | null;
+  metadata: Record<string, unknown> | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+function mapDatasetRow(row: DatasetRow): Dataset {
+  return {
+    id: row.id,
+    source: row.source,
+    name: row.name,
+    description: row.description,
+    schema: row.schema,
+    rowCount: row.row_count === null ? null : Number(row.row_count),
+    indexedAt: row.indexed_at,
+    metadata: row.metadata,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function getDatasetBySource(source: string): Promise<Dataset | null> {
+  const result = await pool.query<DatasetRow>(
+    'SELECT * FROM datasets WHERE source = $1 ORDER BY created_at DESC LIMIT 1',
+    [source],
+  );
+  const row = result.rows[0];
+  return row ? mapDatasetRow(row) : null;
+}
+
+export interface InsertDatasetInput {
+  source: string;
+  name: string;
+  description?: string | null;
+  schema?: Record<string, unknown> | null;
+  rowCount?: number | null;
+  indexedAt?: Date | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export async function insertDataset(input: InsertDatasetInput): Promise<Dataset> {
+  const result = await pool.query<DatasetRow>(
+    `INSERT INTO datasets (source, name, description, schema, row_count, indexed_at, metadata)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING *`,
+    [
+      input.source,
+      input.name,
+      input.description ?? null,
+      input.schema ?? null,
+      input.rowCount ?? null,
+      input.indexedAt ?? null,
+      input.metadata ?? null,
+    ],
+  );
+  const row = result.rows[0];
+  if (!row) {
+    throw new Error('insertDataset: insert returned no row');
+  }
+  return mapDatasetRow(row);
+}
+
+export async function markDatasetIndexed(id: string, rowCount: number): Promise<void> {
+  await pool.query('UPDATE datasets SET row_count = $2, indexed_at = NOW(), updated_at = NOW() WHERE id = $1', [
+    id,
+    rowCount,
+  ]);
+}
 
 interface DocumentRow {
   id: string;
