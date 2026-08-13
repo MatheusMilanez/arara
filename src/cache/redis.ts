@@ -1,10 +1,11 @@
 import 'dotenv/config';
 import { createClient } from 'redis';
+import { logger } from '../observability/logger.js';
 
 export const redisClient = createClient({ url: process.env.REDIS_URL ?? 'redis://localhost:6379' });
 
 redisClient.on('error', (err: unknown) => {
-  console.error('Unexpected Redis client error', err);
+  logger.error({ component: 'redis', error: err instanceof Error ? err.message : String(err) }, 'Unexpected Redis client error');
 });
 
 let isConnected = false;

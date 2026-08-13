@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import pg from 'pg';
+import { logger } from '../observability/logger.js';
 
 const { Pool } = pg;
 
@@ -37,7 +38,7 @@ export async function up(): Promise<void> {
   const pending = listUpMigrations().filter((file) => !applied.has(file));
 
   if (pending.length === 0) {
-    console.log('No pending migrations.');
+    logger.info('No pending migrations.');
     return;
   }
 
@@ -49,7 +50,7 @@ export async function up(): Promise<void> {
       await client.query(sql);
       await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
       await client.query('COMMIT');
-      console.log(`Applied: ${file}`);
+      logger.info(`Applied: ${file}`);
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -67,7 +68,7 @@ export async function down(): Promise<void> {
   const last = result.rows[0];
 
   if (!last) {
-    console.log('No migrations to revert.');
+    logger.info('No migrations to revert.');
     return;
   }
 
@@ -79,7 +80,7 @@ export async function down(): Promise<void> {
     await client.query(sql);
     await client.query('DELETE FROM schema_migrations WHERE name = $1', [last.name]);
     await client.query('COMMIT');
-    console.log(`Reverted: ${last.name}`);
+    logger.info(`Reverted: ${last.name}`);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -102,7 +103,7 @@ export function create(name: string | undefined): void {
 
   writeFileSync(path.join(migrationsDir, `${base}.up.sql`), '-- Write your migration here\n');
   writeFileSync(path.join(migrationsDir, `${base}.down.sql`), '-- Write your rollback here\n');
-  console.log(`Created: ${base}.up.sql / ${base}.down.sql`);
+  logger.info(`Created: ${base}.up.sql / ${base}.down.sql`);
 }
 
 async function main(): Promise<void> {
@@ -129,7 +130,7 @@ const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileUR
 
 if (isMain) {
   main().catch((err: unknown) => {
-    console.error(err);
+    logger.error({ error: err instanceof Error ? err.message : String(err) }, 'Migration command failed');
     process.exit(1);
   });
 }

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import pg from 'pg';
+import { logger } from '../observability/logger.js';
 
 const { Pool } = pg;
 
@@ -13,7 +14,7 @@ export const pool = new Pool({
 // Errors on idle clients (e.g. connection dropped by the server) don't
 // reject any query promise, so without this handler they crash the process.
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle database client', err);
+  logger.error({ component: 'database', error: err instanceof Error ? err.message : String(err) }, 'Unexpected error on idle database client');
 });
 
 export interface DatabaseHealth {
