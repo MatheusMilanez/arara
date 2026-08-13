@@ -1,5 +1,12 @@
+import { pathToFileURL } from 'node:url';
 import { closePool } from '../../../database/client.js';
-import { getDatasetBySource, insertDataset, insertDocument, markDatasetIndexed } from '../../../database/queries.js';
+import {
+  deleteDocumentsByDataset,
+  getDatasetBySource,
+  insertDataset,
+  insertDocument,
+  markDatasetIndexed,
+} from '../../../database/queries.js';
 import { logger } from '../../../observability/logger.js';
 import { Ingester } from '../index.js';
 import type { IngestionStrategy, RawData } from '../types.js';
@@ -61,7 +68,7 @@ async function fetchWithRetry(url: string, attempt = 1): Promise<Response> {
   }
 }
 
-function makeStrategy(datasetId: string): IngestionStrategy {
+export function makeStrategy(datasetId: string): IngestionStrategy {
   return {
     datasource: DATASOURCE,
 
@@ -126,6 +133,12 @@ async function run(): Promise<void> {
 
   const documents = await new Ingester(makeStrategy(dataset.id)).run();
 
+  // Full resync: this datasource has no natural unique key to upsert on
+  // (IBGE municipio IDs live in `metadata`, not a column), so re-running
+  // this script clears the previous batch before reloading instead of
+  // appending duplicates on top of it.
+  await deleteDocumentsByDataset(dataset.id);
+
   const BATCH_SIZE = 50;
   let inserted = 0;
   let failed = 0;
@@ -151,11 +164,17 @@ async function run(): Promise<void> {
   logger.info({ component: DATASOURCE, inserted, failed, total: documents.length }, 'Insert finished');
 }
 
-run()
-  .catch((err: unknown) => {
-    logger.error({ component: DATASOURCE, error: err instanceof Error ? err.message : String(err) }, 'Ingestion failed');
-    process.exitCode = 1;
-  })
-  .finally(() => {
-    void closePool();
-  });
+// Only auto-run when this file is executed directly (tsx .../ibgeMunicipios.ts),
+// not when it's imported by tests — importing it must not hit the network or DB.
+const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMain) {
+  run()
+    .catch((err: unknown) => {
+      logger.error({ component: DATASOURCE, error: err instanceof Error ? err.message : String(err) }, 'Ingestion failed');
+      process.exitCode = 1;
+    })
+    .finally(() => {
+      void closePool();
+    });
+}

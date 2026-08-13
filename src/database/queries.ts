@@ -84,6 +84,10 @@ export async function listDatasets(): Promise<Dataset[]> {
   return result.rows.map(mapDatasetRow);
 }
 
+export async function deleteDocumentsByDataset(datasetId: string): Promise<void> {
+  await pool.query('DELETE FROM documents WHERE dataset_id = $1', [datasetId]);
+}
+
 interface DocumentRow {
   id: string;
   dataset_id: string;

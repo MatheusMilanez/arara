@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import pg from 'pg';
 
 const { Pool } = pg;
@@ -31,7 +31,7 @@ async function getAppliedMigrations(): Promise<Set<string>> {
   return new Set(result.rows.map((row) => row.name));
 }
 
-async function up(): Promise<void> {
+export async function up(): Promise<void> {
   await ensureMigrationsTable();
   const applied = await getAppliedMigrations();
   const pending = listUpMigrations().filter((file) => !applied.has(file));
@@ -59,7 +59,7 @@ async function up(): Promise<void> {
   }
 }
 
-async function down(): Promise<void> {
+export async function down(): Promise<void> {
   await ensureMigrationsTable();
   const result = await pool.query<{ name: string }>(
     'SELECT name FROM schema_migrations ORDER BY applied_at DESC LIMIT 1',
@@ -88,7 +88,7 @@ async function down(): Promise<void> {
   }
 }
 
-function create(name: string | undefined): void {
+export function create(name: string | undefined): void {
   if (!name) {
     throw new Error('Usage: npm run migrate:create -- <name>');
   }
@@ -123,7 +123,13 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only auto-run when this file is executed directly (tsx src/database/migrations.ts),
+// not when it's imported by tests — importing it must not connect/mutate a database.
+const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMain) {
+  main().catch((err: unknown) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
