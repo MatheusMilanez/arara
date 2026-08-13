@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:14
+    container_name: arara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: arara
+      POSTGRES_PASSWORD: arara
+      POSTGRES_DB: arara
+    ports:
+      - "5432:5432"
+    volumes:
+      - arara-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arara -d arara"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arara-network
+
+  redis:
+    image: redis:6
+    container_name: arara-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - arara-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arara-network
+
+networks:
+  arara-network:
+    driver: bridge
+
+volumes:
+  arara-postgres-data:
+  arara-redis-data:
