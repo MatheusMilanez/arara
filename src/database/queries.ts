@@ -77,6 +77,13 @@ export async function markDatasetIndexed(id: string, rowCount: number): Promise<
   ]);
 }
 
+export async function listDatasets(): Promise<Dataset[]> {
+  const result = await pool.query<DatasetRow>(
+    'SELECT * FROM datasets ORDER BY indexed_at DESC NULLS LAST, created_at DESC',
+  );
+  return result.rows.map(mapDatasetRow);
+}
+
 interface DocumentRow {
   id: string;
   dataset_id: string;
@@ -147,8 +154,13 @@ export interface SearchDocumentsOptions {
   datasetId?: string;
 }
 
+export interface SearchResultDocument extends Document {
+  relevance: number;
+  dataset: string;
+}
+
 export interface SearchDocumentsResult {
-  documents: Array<Document & { relevance: number }>;
+  documents: SearchResultDocument[];
   total: number;
 }
 
@@ -160,12 +172,14 @@ export async function searchDocuments(
   const offset = options.offset ?? 0;
 
   const searchParams: unknown[] = [query, limit, offset];
-  const searchDatasetFilter = options.datasetId ? `AND dataset_id = $${searchParams.push(options.datasetId)}` : '';
+  const searchDatasetFilter = options.datasetId ? `AND d.dataset_id = $${searchParams.push(options.datasetId)}` : '';
 
-  const searchResult = await pool.query<DocumentRow & { relevance: number }>(
-    `SELECT *, ts_rank(search_vector, websearch_to_tsquery('portuguese', $1)) AS relevance
-     FROM documents
-     WHERE search_vector @@ websearch_to_tsquery('portuguese', $1) ${searchDatasetFilter}
+  const searchResult = await pool.query<DocumentRow & { relevance: number; dataset_source: string }>(
+    `SELECT d.*, ds.source AS dataset_source,
+            ts_rank(d.search_vector, websearch_to_tsquery('portuguese_unaccent', $1)) AS relevance
+     FROM documents d
+     JOIN datasets ds ON ds.id = d.dataset_id
+     WHERE d.search_vector @@ websearch_to_tsquery('portuguese_unaccent', $1) ${searchDatasetFilter}
      ORDER BY relevance DESC
      LIMIT $2 OFFSET $3`,
     searchParams,
@@ -176,12 +190,12 @@ export async function searchDocuments(
 
   const countResult = await pool.query<{ count: string }>(
     `SELECT COUNT(*) FROM documents
-     WHERE search_vector @@ websearch_to_tsquery('portuguese', $1) ${countDatasetFilter}`,
+     WHERE search_vector @@ websearch_to_tsquery('portuguese_unaccent', $1) ${countDatasetFilter}`,
     countParams,
   );
 
   return {
-    documents: searchResult.rows.map((row) => ({ ...mapRow(row), relevance: row.relevance })),
+    documents: searchResult.rows.map((row) => ({ ...mapRow(row), relevance: row.relevance, dataset: row.dataset_source })),
     total: Number(countResult.rows[0]?.count ?? 0),
   };
 }
