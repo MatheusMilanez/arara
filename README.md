@@ -96,8 +96,7 @@ estar rodando para os testes de `/health` passarem).
 
 ## Como contribuir
 
-Este é um projeto solo de aprendizado (veja o [roadmap](ARARA_ROADMAP.md)), mas issues e PRs
-são bem-vindos:
+Este é um projeto solo de aprendizado, mas issues e PRs são bem-vindos:
 
 1. Abra uma issue descrevendo o problema ou a proposta antes de codar algo grande
 2. `npm run type-check && npm run lint && npm test` precisam passar antes de um PR
@@ -129,4 +128,6 @@ docs/
 
 ## Roadmap
 
-O desenvolvimento segue milestones M0–M5, detalhados em [ARARA_ROADMAP.md](ARARA_ROADMAP.md).
+O desenvolvimento segue milestones M0–M5, cada um com um objetivo concreto (fundação,
+crescimento, concorrência, observabilidade, testes, documentação). Decisões arquiteturais
+de cada fase ficam registradas em `docs/ADRs`.
