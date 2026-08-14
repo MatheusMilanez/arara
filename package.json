@@ -19,9 +19,12 @@
     "migrate:up": "tsx src/database/migrations.ts up",
     "migrate:down": "tsx src/database/migrations.ts down",
     "migrate:create": "tsx src/database/migrations.ts create",
-    "ingest:ibge": "tsx src/services/ingester/datasources/ibgeMunicipios.ts"
+    "ingest:ibge": "tsx src/services/ingester/datasources/ibgeMunicipios.ts",
+    "ingest:tse": "tsx src/services/ingester/datasources/tseCandidatos.ts"
   },
   "dependencies": {
+    "adm-zip": "^0.6.0",
+    "csv-parse": "^7.0.2",
     "dotenv": "^17.4.2",
     "fastify": "^5.11.3",
     "pg": "^8.23.0",
@@ -33,6 +36,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@testcontainers/postgresql": "^10.28.0",
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "^22.20.1",
     "@types/pg": "^8.21.0",
     "@types/supertest": "^7.2.1",
