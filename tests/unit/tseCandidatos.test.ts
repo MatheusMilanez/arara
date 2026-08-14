@@ -152,6 +152,21 @@ describe('tseCandidatos fetch', () => {
     expect(row?.['NM_UE']).toBe('CARACARAÍ');
   });
 
+  it('skips a UF file with a malformed CSV and still returns rows from the rest', async () => {
+    const zip = buildZip({
+      'consulta_cand_2024_AC.csv': [csvRow({ SQ_CANDIDATO: '1', NM_URNA_CANDIDATO: 'A' })],
+      // aspas nunca fechadas — csv-parse lança CSV_QUOTE_NOT_CLOSED nesse arquivo
+      'consulta_cand_2024_RR.csv': ['"1";"sem fechar a aspa'],
+      'consulta_cand_2024_SP.csv': [csvRow({ SQ_CANDIDATO: '2', NM_URNA_CANDIDATO: 'B' })],
+    });
+    stubFetch(zip);
+
+    const result = await strategy.fetch();
+
+    expect(result).toHaveLength(2);
+    expect(result.map((r) => r['SQ_CANDIDATO'])).toEqual(['1', '2']);
+  });
+
   it('retries the download and succeeds on a later attempt', async () => {
     vi.useFakeTimers();
     const zip = buildZip({ 'consulta_cand_2024_RR.csv': [csvRow({ SQ_CANDIDATO: '1', NM_URNA_CANDIDATO: 'A' })] });

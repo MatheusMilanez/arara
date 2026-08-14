@@ -23,11 +23,13 @@ export interface DatabaseHealth {
   error?: string;
 }
 
-export async function checkDatabaseHealth(): Promise<DatabaseHealth> {
+// `targetPool` é injetável pra permitir testar o caminho de erro com um pool
+// apontado pra um endereço inválido, sem precisar derrubar o Postgres real
+export async function checkDatabaseHealth(targetPool: pg.Pool = pool): Promise<DatabaseHealth> {
   const start = performance.now();
 
   try {
-    await pool.query('SELECT 1');
+    await targetPool.query('SELECT 1');
     return { status: 'ok', latencyMs: Math.round(performance.now() - start) };
   } catch (err) {
     return {

@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
+    "audit": "npm audit --omit=dev",
     "migrate:up": "tsx src/database/migrations.ts up",
     "migrate:down": "tsx src/database/migrations.ts down",
     "migrate:create": "tsx src/database/migrations.ts create",

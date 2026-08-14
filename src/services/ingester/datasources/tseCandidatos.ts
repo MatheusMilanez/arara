@@ -84,18 +84,27 @@ function extractCandidateRows(zipBuffer: Buffer): RawData[] {
     .filter((entry) => entry.entryName.endsWith(CSV_SUFFIX) && !entry.entryName.endsWith(CONSOLIDATED_FILE_SUFFIX));
 
   for (const entry of entries) {
-    // os arquivos do TSE vêm em Latin-1 (ISO-8859-1), não UTF-8
-    const text = entry.getData().toString('latin1');
-    const records = parse(text, {
-      columns: true,
-      delimiter: ';',
-      quote: '"',
-      skip_empty_lines: true,
-      trim: true,
-    }) as RawData[];
+    try {
+      // os arquivos do TSE vêm em Latin-1 (ISO-8859-1), não UTF-8
+      const text = entry.getData().toString('latin1');
+      const records = parse(text, {
+        columns: true,
+        delimiter: ';',
+        quote: '"',
+        skip_empty_lines: true,
+        trim: true,
+      }) as RawData[];
 
-    rows.push(...records);
-    logger.info({ component: DATASOURCE, file: entry.entryName, count: records.length }, 'Arquivo de UF processado');
+      rows.push(...records);
+      logger.info({ component: DATASOURCE, file: entry.entryName, count: records.length }, 'Arquivo de UF processado');
+    } catch (err) {
+      // um CSV corrompido não pode derrubar a ingestão inteira — mesmo
+      // princípio do ingester do IBGE: pula esse arquivo e segue com o resto
+      logger.error(
+        { component: DATASOURCE, file: entry.entryName, error: err instanceof Error ? err.message : String(err) },
+        'Falha ao parsear o CSV, pulando este arquivo e seguindo com os demais',
+      );
+    }
   }
 
   return rows;

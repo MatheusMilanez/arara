@@ -32,4 +32,8 @@ jobs:
       - run: npm ci
       - run: npm run type-check
       - run: npm run lint
+      # só dependências de produção: o testcontainers (dev-only) tem
+      # vulnerabilidades conhecidas sem fix ainda, sem risco pro que vai
+      # pra produção — não faz sentido travar o CI por causa delas
+      - run: npm run audit
       - run: npm test -- --coverage
