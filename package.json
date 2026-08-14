@@ -21,7 +21,8 @@
     "migrate:down": "tsx src/database/migrations.ts down",
     "migrate:create": "tsx src/database/migrations.ts create",
     "ingest:ibge": "tsx src/services/ingester/datasources/ibgeMunicipios.ts",
-    "ingest:tse": "tsx src/services/ingester/datasources/tseCandidatos.ts"
+    "ingest:tse": "tsx src/services/ingester/datasources/tseCandidatos.ts",
+    "ingest:inep": "tsx src/services/ingester/datasources/inepEscolas.ts"
   },
   "dependencies": {
     "adm-zip": "^0.6.0",

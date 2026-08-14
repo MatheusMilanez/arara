@@ -35,3 +35,8 @@ START_HERE.md
 QUICK_REFERENCE.md
 ARARA_SKILL.md
 ARARA_ROADMAP.md
+
+# Dados brutos baixados manualmente pra inspecionar estrutura de datasource
+# (nunca commitar — são centenas de MB de dado público, não código)
+*.zip
+/dados-raw/
