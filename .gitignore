@@ -28,3 +28,10 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Documentos de processo pessoal (guiam o desenvolvimento com IA,
+# não fazem parte da documentação pública do projeto)
+START_HERE.md
+QUICK_REFERENCE.md
+ARARA_SKILL.md
+ARARA_ROADMAP.md
