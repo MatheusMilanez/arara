@@ -29,6 +29,16 @@ describe('API routes', () => {
     });
   });
 
+  describe('GET /metrics', () => {
+    it('returns Prometheus-formatted metrics', async () => {
+      const res = await request(app.server).get('/metrics');
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('text/plain');
+      expect(res.text).toContain('# HELP database_pool_connections');
+      expect(res.text).toContain('# HELP ingest_duration_seconds');
+    });
+  });
+
   describe('GET /api/v1/datasets', () => {
     it('returns an empty list when no datasets exist', async () => {
       const res = await request(app.server).get('/api/v1/datasets');

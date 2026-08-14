@@ -1,5 +1,6 @@
 import type { InsertDocumentInput } from '../../database/queries.js';
 import { logger } from '../../observability/logger.js';
+import { documentsIngestedTotal, ingestDurationSeconds, ingestErrorsTotal } from '../../observability/metrics.js';
 import { DatasourceError, IngestionError, TimeoutError } from './errors.js';
 import type { IngestionStrategy, RawData } from './types.js';
 
@@ -45,6 +46,7 @@ export class Ingester {
           ? err
           : new DatasourceError(`Failed to fetch from ${datasource}`, datasource, { cause: err });
       logger.error({ component: 'ingester', datasource, error: wrapped.message }, 'Fetch failed');
+      ingestErrorsTotal.inc({ datasource });
       throw wrapped;
     }
 
@@ -59,6 +61,7 @@ export class Ingester {
         documents.push(...(Array.isArray(normalized) ? normalized : [normalized]));
       } catch (err) {
         errors += 1;
+        ingestErrorsTotal.inc({ datasource });
         logger.warn(
           {
             component: 'ingester',
@@ -90,6 +93,9 @@ export class Ingester {
       },
       'Ingestion finished',
     );
+
+    ingestDurationSeconds.observe({ datasource }, durationMs / 1000);
+    documentsIngestedTotal.inc({ datasource }, documents.length);
 
     if (rawRecords.length > 0 && documents.length === 0) {
       throw new IngestionError(`All ${rawRecords.length} records failed to normalize`, datasource);
