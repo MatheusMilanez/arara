@@ -1,7 +1,22 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { makeStrategy } from '../../src/services/ingester/datasources/ibgeMunicipios.js';
 
 const datasetId = '00000000-0000-0000-0000-000000000000';
+const TOTAL_UFS = 27;
+
+function ufFromUrl(url: string): string {
+  return url.match(/estados\/([A-Z]{2})\/municipios/)?.[1] ?? 'XX';
+}
+
+function jsonResponse(body: unknown, ok = true): Response {
+  return { ok, status: ok ? 200 : 500, json: async () => body } as unknown as Response;
+}
+
+function stubFetch(impl: (url: string) => Promise<Response> | Response): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn((input: string | URL | Request) => Promise.resolve(impl(String(input))));
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
 
 describe('ibgeMunicipios normalize', () => {
   const strategy = makeStrategy(datasetId);
@@ -44,5 +59,60 @@ describe('ibgeMunicipios normalize', () => {
 
   it('exposes the expected datasource name', () => {
     expect(strategy.datasource).toBe('ibge-municipios');
+  });
+});
+
+describe('ibgeMunicipios fetch', () => {
+  const strategy = makeStrategy(datasetId);
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('fetches and aggregates municipios across every state', async () => {
+    vi.useFakeTimers();
+    const fetchMock = stubFetch((url) => jsonResponse([{ id: 1, nome: `Cidade ${ufFromUrl(url)}` }]));
+
+    const promise = strategy.fetch();
+    await vi.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result).toHaveLength(TOTAL_UFS);
+    expect(fetchMock).toHaveBeenCalledTimes(TOTAL_UFS);
+  });
+
+  it('retries a failed request and keeps the state once a later attempt succeeds', async () => {
+    vi.useFakeTimers();
+    let attempts = 0;
+    const fetchMock = stubFetch((url) => {
+      if (ufFromUrl(url) === 'AC') {
+        attempts += 1;
+        if (attempts < 2) {
+          return Promise.reject(new Error('network blip'));
+        }
+      }
+      return jsonResponse([{ id: 1, nome: 'X' }]);
+    });
+
+    const promise = strategy.fetch();
+    await vi.runAllTimersAsync();
+    const result = await promise;
+
+    expect(attempts).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(TOTAL_UFS + 1); // one extra call for AC's retry
+    expect(result).toHaveLength(TOTAL_UFS);
+  });
+
+  it('skips a state that keeps returning a non-2xx status and continues with the rest', async () => {
+    vi.useFakeTimers();
+    const fetchMock = stubFetch((url) => jsonResponse([{ id: 1, nome: 'X' }], ufFromUrl(url) !== 'AC'));
+
+    const promise = strategy.fetch();
+    await vi.runAllTimersAsync();
+    const result = await promise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(TOTAL_UFS + 2); // AC retried MAX_ATTEMPTS (3) times total
+    expect(result).toHaveLength(TOTAL_UFS - 1);
   });
 });

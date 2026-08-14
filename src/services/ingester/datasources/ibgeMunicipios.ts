@@ -121,7 +121,7 @@ export function makeStrategy(datasetId: string): IngestionStrategy {
   };
 }
 
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   let dataset = await getDatasetBySource(DATASOURCE);
   if (!dataset) {
     dataset = await insertDataset({

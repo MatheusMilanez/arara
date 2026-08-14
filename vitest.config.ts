@@ -4,6 +4,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     globalSetup: ['./tests/globalSetup.ts'],
+    // Integration test files share one real Postgres container and TRUNCATE
+    // its tables in afterEach — running files in parallel lets one file's
+    // TRUNCATE wipe rows another file is still asserting on.
+    fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 60_000,
     coverage: {
