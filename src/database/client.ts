@@ -5,8 +5,11 @@ import { logger } from '../observability/logger.js';
 const { Pool } = pg;
 
 // ARARA-211: max cobre o pico de 3 ingestões em paralelo + tráfego normal da
-// API; min mantém conexões abertas prontas (evita pagar o custo de handshake
-// TCP+TLS+auth do Postgres a cada pico de tráfego depois de um período ocioso)
+// API. min NÃO abre conexões antecipadamente no boot (o pg-pool só usa esse
+// valor pra decidir se uma conexão ociosa pode ser fechada por idleTimeout —
+// ver _isAboveMin() em pg-pool) — o efeito real é: depois que o pool cresce
+// até aqui por causa de carga de verdade, ele não encolhe abaixo disso nos
+// períodos ociosos seguintes, evitando reabrir conexão a cada novo pico.
 const POOL_MAX = 20;
 const POOL_MIN = 10;
 
