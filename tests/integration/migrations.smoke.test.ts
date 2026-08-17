@@ -45,6 +45,7 @@ describe('migrations CLI (smoke test)', () => {
     expect(applied.rows.map((row) => row.name)).toEqual([
       '001_initial_schema.up.sql',
       '002_accent_insensitive_search.up.sql',
+      '003_document_external_id.up.sql',
     ]);
   }, 30_000);
 
@@ -52,23 +53,26 @@ describe('migrations CLI (smoke test)', () => {
     await runMigrationCommand('up');
 
     const applied = await client.query('SELECT name FROM schema_migrations');
-    expect(applied.rowCount).toBe(2);
+    expect(applied.rowCount).toBe(3);
   }, 30_000);
 
   it('reverts only the last applied migration on down', async () => {
     await runMigrationCommand('down');
 
-    const applied = await client.query<{ name: string }>('SELECT name FROM schema_migrations');
-    expect(applied.rows.map((row) => row.name)).toEqual(['001_initial_schema.up.sql']);
+    const applied = await client.query<{ name: string }>('SELECT name FROM schema_migrations ORDER BY name');
+    expect(applied.rows.map((row) => row.name)).toEqual([
+      '001_initial_schema.up.sql',
+      '002_accent_insensitive_search.up.sql',
+    ]);
 
-    // a config de busca sem acento é criada pela migration 002 — revertida, some
-    const config = await client.query("SELECT 1 FROM pg_ts_config WHERE cfgname = 'portuguese_unaccent'");
-    expect(config.rowCount).toBe(0);
-
-    // mas a tabela da migration 001 (não revertida) continua de pé
-    const tables = await client.query<{ table_name: string }>(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'documents'",
+    // a coluna external_id é criada pela migration 003 — revertida, some
+    const column = await client.query(
+      "SELECT 1 FROM information_schema.columns WHERE table_name = 'documents' AND column_name = 'external_id'",
     );
-    expect(tables.rowCount).toBe(1);
+    expect(column.rowCount).toBe(0);
+
+    // mas a config de busca sem acento da migration 002 (não revertida) continua de pé
+    const config = await client.query("SELECT 1 FROM pg_ts_config WHERE cfgname = 'portuguese_unaccent'");
+    expect(config.rowCount).toBe(1);
   }, 30_000);
 });
