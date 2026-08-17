@@ -1,5 +1,6 @@
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { invalidateSearchCache } from '../../src/cache/searchCache.js';
 import { buildApp } from '../../src/app.js';
 import { pool } from '../../src/database/client.js';
 import { insertDataset, insertDocument } from '../../src/database/queries.js';
@@ -14,6 +15,13 @@ describe('API routes', () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  beforeEach(async () => {
+    // garante geração nova a cada teste — sem isso, cache deixado por uma
+    // rodada anterior da suíte (Redis não é efêmero como o Postgres de teste)
+    // poderia vazar pra um teste que reusa o mesmo termo de busca
+    await invalidateSearchCache();
   });
 
   afterEach(async () => {
@@ -81,6 +89,36 @@ describe('API routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].dataset).toBe('test-source');
+    });
+
+    describe('cache (ARARA-300)', () => {
+      it('a segunda busca idêntica vem do cache — não reflete um documento inserido depois', async () => {
+        const dataset = await insertDataset({ source: 'cache-source', name: 'Cache Dataset' });
+        await insertDocument({ datasetId: dataset.id, title: 'Cachehttpuniqueterm primeiro', content: 'x' });
+
+        const first = await request(app.server).get('/api/v1/search').query({ q: 'cachehttpuniqueterm' });
+        expect(first.body.total).toBe(1);
+
+        // insere um segundo documento que também bateria na mesma busca —
+        // se a segunda chamada fosse ao banco, o total mudaria pra 2
+        await insertDocument({ datasetId: dataset.id, title: 'Cachehttpuniqueterm segundo', content: 'x' });
+
+        const second = await request(app.server).get('/api/v1/search').query({ q: 'cachehttpuniqueterm' });
+        expect(second.body.total).toBe(1); // veio do cache, ainda não sabe do segundo documento
+      });
+
+      it('depois de invalidar o cache, a busca reflete o dado novo', async () => {
+        const dataset = await insertDataset({ source: 'cache-source-2', name: 'Cache Dataset 2' });
+        await insertDocument({ datasetId: dataset.id, title: 'Cacheinvalidacaouniqueterm primeiro', content: 'x' });
+
+        await request(app.server).get('/api/v1/search').query({ q: 'cacheinvalidacaouniqueterm' });
+
+        await insertDocument({ datasetId: dataset.id, title: 'Cacheinvalidacaouniqueterm segundo', content: 'x' });
+        await invalidateSearchCache(); // é isso que cada ingestão real chama ao terminar
+
+        const res = await request(app.server).get('/api/v1/search').query({ q: 'cacheinvalidacaouniqueterm' });
+        expect(res.body.total).toBe(2);
+      });
     });
   });
 });

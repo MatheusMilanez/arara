@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url';
+import { invalidateSearchCache } from '../../../cache/searchCache.js';
 import { closePool } from '../../../database/client.js';
 import {
   deleteDocumentsByDataset,
@@ -161,6 +162,7 @@ export async function run(): Promise<void> {
   }
 
   await markDatasetIndexed(dataset.id, inserted);
+  await invalidateSearchCache();
   logger.info({ component: DATASOURCE, inserted, failed, total: documents.length }, 'Insert finished');
 }
 

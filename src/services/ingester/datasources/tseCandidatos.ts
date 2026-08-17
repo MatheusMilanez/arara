@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import AdmZip from 'adm-zip';
 import { parse } from 'csv-parse/sync';
+import { invalidateSearchCache } from '../../../cache/searchCache.js';
 import { closePool } from '../../../database/client.js';
 import {
   deleteDocumentsByDataset,
@@ -215,6 +216,7 @@ export async function run(): Promise<void> {
   }
 
   await markDatasetIndexed(dataset.id, inserted);
+  await invalidateSearchCache();
   logger.info({ component: DATASOURCE, inserted, failed, total: documents.length }, 'Inserção finalizada');
 }
 
