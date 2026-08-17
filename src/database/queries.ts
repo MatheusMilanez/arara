@@ -91,6 +91,7 @@ export async function deleteDocumentsByDataset(datasetId: string): Promise<void>
 interface DocumentRow {
   id: string;
   dataset_id: string;
+  external_id: string | null;
   title: string | null;
   content: string | null;
   metadata: Record<string, unknown> | null;
@@ -104,6 +105,7 @@ function mapRow(row: DocumentRow): Document {
   return {
     id: row.id,
     datasetId: row.dataset_id,
+    externalId: row.external_id,
     title: row.title,
     content: row.content,
     metadata: row.metadata,
@@ -144,6 +146,59 @@ export async function insertDocument(input: InsertDocumentInput): Promise<Docume
   }
 
   return mapRow(row);
+}
+
+export interface UpsertDocumentInput {
+  datasetId: string;
+  externalId: string;
+  title?: string | null;
+  content?: string | null;
+  metadata?: Record<string, unknown> | null;
+  sourceUrl?: string | null;
+  indexedAt?: Date | null;
+}
+
+// ARARA-210: duas chamadas concorrentes com o mesmo conjunto de chaves em
+// ordem diferente travam linhas em ordem cruzada e o Postgres derruba uma
+// delas com "deadlock detected". Ordenar por (datasetId, externalId) antes
+// de montar o VALUES garante que toda chamada concorrente pega os locks
+// sempre na mesma sequência — sem isso não existe ciclo possível.
+export async function upsertDocuments(inputs: UpsertDocumentInput[]): Promise<void> {
+  if (inputs.length === 0) return;
+
+  const sorted = [...inputs].sort((a, b) => {
+    const byDataset = a.datasetId.localeCompare(b.datasetId);
+    return byDataset !== 0 ? byDataset : a.externalId.localeCompare(b.externalId);
+  });
+
+  const values: string[] = [];
+  const params: unknown[] = [];
+  sorted.forEach((doc, i) => {
+    const base = i * 7;
+    values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`);
+    params.push(
+      doc.datasetId,
+      doc.externalId,
+      doc.title ?? null,
+      doc.content ?? null,
+      doc.metadata ?? null,
+      doc.sourceUrl ?? null,
+      doc.indexedAt ?? null,
+    );
+  });
+
+  await pool.query(
+    `INSERT INTO documents (dataset_id, external_id, title, content, metadata, source_url, indexed_at)
+     VALUES ${values.join(', ')}
+     ON CONFLICT (dataset_id, external_id) DO UPDATE SET
+       title = EXCLUDED.title,
+       content = EXCLUDED.content,
+       metadata = EXCLUDED.metadata,
+       source_url = EXCLUDED.source_url,
+       indexed_at = EXCLUDED.indexed_at,
+       updated_at = NOW()`,
+    params,
+  );
 }
 
 export async function getDocument(id: string): Promise<Document | null> {

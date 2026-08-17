@@ -14,6 +14,7 @@ export interface Dataset {
 export interface Document {
   id: string;
   datasetId: string;
+  externalId: string | null;
   title: string | null;
   content: string | null;
   metadata: Record<string, unknown> | null;
