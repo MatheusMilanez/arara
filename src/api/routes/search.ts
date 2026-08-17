@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { getCachedSearch, setCachedSearch } from '../../cache/searchCache.js';
 import { searchDocuments } from '../../database/queries.js';
 import { logger } from '../../observability/logger.js';
+import { recordSearchCacheHit, recordSearchCacheMiss } from '../../observability/metrics.js';
 
 const searchQuerySchema = z.object({
   q: z.string().min(1).max(500),
@@ -9,6 +11,21 @@ const searchQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
   dataset: z.string().optional(),
 });
+
+interface SearchResponseBody {
+  ok: true;
+  data: Array<{
+    id: string;
+    title: string | null;
+    dataset: string;
+    relevance: number;
+    metadata: Record<string, unknown> | null;
+    source_url: string | null;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
 
 export async function searchRoutes(app: FastifyInstance): Promise<void> {
   app.get('/search', async (request, reply) => {
@@ -24,13 +41,25 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
 
     const { q, limit, offset, dataset } = parsed.data;
     const start = performance.now();
+    const cacheParams = { q, limit, offset, ...(dataset ? { datasetId: dataset } : {}) };
+
+    const cached = await getCachedSearch<SearchResponseBody>(cacheParams);
+    if (cached) {
+      recordSearchCacheHit();
+      logger.info(
+        { component: 'search', q, limit, offset, cache: 'hit', durationMs: Math.round(performance.now() - start) },
+        'Search executed',
+      );
+      return cached;
+    }
+    recordSearchCacheMiss();
 
     const result = await searchDocuments(q, { limit, offset, ...(dataset ? { datasetId: dataset } : {}) });
 
     const durationMs = Math.round(performance.now() - start);
-    logger.info({ component: 'search', q, limit, offset, total: result.total, durationMs }, 'Search executed');
+    logger.info({ component: 'search', q, limit, offset, total: result.total, cache: 'miss', durationMs }, 'Search executed');
 
-    return {
+    const body: SearchResponseBody = {
       ok: true,
       data: result.documents.map((doc) => ({
         id: doc.id,
@@ -44,5 +73,9 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
       limit,
       offset,
     };
+
+    await setCachedSearch(cacheParams, body);
+
+    return body;
   });
 }

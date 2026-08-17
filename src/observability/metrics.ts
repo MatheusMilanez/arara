@@ -37,3 +37,27 @@ new Gauge({
     this.set({ state: 'waiting' }, pool.waitingCount);
   },
 });
+
+// ARARA-300: contadores simples em memória — não usam prom-client Counter
+// porque o gauge abaixo precisa ler os dois valores de forma síncrona no
+// collect(); ler outro metric via registry ali seria mais complicado à toa
+let searchCacheHits = 0;
+let searchCacheMisses = 0;
+
+export function recordSearchCacheHit(): void {
+  searchCacheHits += 1;
+}
+
+export function recordSearchCacheMiss(): void {
+  searchCacheMisses += 1;
+}
+
+new Gauge({
+  name: 'search_cache_hit_ratio',
+  help: 'Proporção de buscas atendidas pelo cache Redis (hits / (hits + misses)) desde o boot',
+  registers: [register],
+  collect() {
+    const total = searchCacheHits + searchCacheMisses;
+    this.set(total === 0 ? 0 : searchCacheHits / total);
+  },
+});
