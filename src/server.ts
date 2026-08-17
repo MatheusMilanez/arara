@@ -1,16 +1,18 @@
 import 'dotenv/config';
 import { buildApp } from './app.js';
 import { closeRedis } from './cache/redis.js';
-import { closePool } from './database/client.js';
+import { closePool, startPoolMonitor } from './database/client.js';
 import { logger } from './observability/logger.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
 
 const app = await buildApp();
+const stopPoolMonitor = startPoolMonitor();
 
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'Shutting down');
   try {
+    stopPoolMonitor();
     await app.close();
     await Promise.all([closePool(), closeRedis()]);
     process.exit(0);
