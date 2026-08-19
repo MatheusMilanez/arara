@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: arara-api
+    static_configs:
+      # a API roda no host, não no docker-compose — host.docker.internal
+      # funciona out-of-the-box no Docker Desktop (Windows/Mac). No Linux,
+      # é preciso o extra_hosts no serviço prometheus do docker-compose.yml
+      # (já configurado).
+      - targets: ["host.docker.internal:3000"]

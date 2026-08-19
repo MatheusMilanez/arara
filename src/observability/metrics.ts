@@ -1,9 +1,14 @@
-import { Counter, Gauge, Histogram, Registry } from 'prom-client';
+import { collectDefaultMetrics, Counter, Gauge, Histogram, Registry } from 'prom-client';
 import { redisClient } from '../cache/redis.js';
 import { pool } from '../database/client.js';
 import { logger } from './logger.js';
 
 export const register = new Registry();
+
+// CPU, memória (RSS/heap), event loop lag, GC — usados pelo dashboard
+// "System" (ARARA-320). Disco fica de fora: exigiria um exporter à parte
+// (node_exporter) rodando no host, fora do escopo deste projeto.
+collectDefaultMetrics({ register });
 
 export const ingestDurationSeconds = new Histogram({
   name: 'ingest_duration_seconds',

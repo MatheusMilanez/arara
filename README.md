@@ -44,8 +44,8 @@ derrubar a ingestão inteira. Decisões arquiteturais maiores estão documentada
 - Node.js 20+ / TypeScript (strict mode)
 - Fastify (API) + Zod (validação)
 - PostgreSQL 14 (dados + full-text search, accent-insensitive)
-- Redis (cache, a partir do M3 — hoje só usado no health check)
-- Pino (logs estruturados)
+- Redis (cache de buscas, invalidado por geração a cada ingestão)
+- Pino (logs estruturados) + Prometheus/Grafana (métricas e dashboards)
 - Vitest + testcontainers + Supertest (testes)
 
 ## Setup local
@@ -66,6 +66,12 @@ do Brasil via API do IBGE):
 ```bash
 npm run ingest:ibge
 ```
+
+`docker-compose up -d` também sobe Prometheus (`http://localhost:9090`, raspando `/metrics`
+da API a cada 15s) e Grafana (`http://localhost:3001`, login `admin`/`admin`) — os 5
+dashboards (Ingestion, Search, Database, System, Errors) já vêm provisionados, sem setup
+manual. No Linux (fora do Docker Desktop), o Prometheus só alcança a API no host graças ao
+`extra_hosts` já configurado no `docker-compose.yml`.
 
 ## API
 
