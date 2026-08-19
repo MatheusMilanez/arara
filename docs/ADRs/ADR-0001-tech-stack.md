@@ -61,7 +61,7 @@ Razão:
 1. Precisaremos ser explícitos sobre concorrência onde a linguagem não ajuda de graça:
    pool de conexões com limite (`max: 20`), `Promise.allSettled` para isolar falhas entre
    datasources paralelos, ordenação de writes para evitar deadlock (M2 — `ARARA-210`).
-   → Será coberto em ADR futura quando o M2 acontecer de verdade.
+   → Coberto no [ADR-0003](ADR-0003-concurrency.md), quando o M2 aconteceu de verdade.
 
 2. Quando a carga de CPU (não I/O) virar o gargalo — por exemplo, processamento pesado de
    normalização de dados — Node vai precisar de workers (`worker_threads`) ou revisitar a

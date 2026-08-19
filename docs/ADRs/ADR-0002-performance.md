@@ -97,6 +97,21 @@ testes de race condition) que o M2 vai construir.
 3. Se um datasource futuro passar de alguns milhões de documentos, revisita-se C (`COPY`)
    — o ponto de virada é quando o ganho de multi-row insert (B) não for mais suficiente.
 
+## Nota de finalização (revisão ARARA-500)
+A decisão B (insert multi-row) **nunca foi aplicada nos três ingesters reais**. A função
+que faz isso existe — `upsertDocuments()` em `src/database/queries.ts` — mas foi construída
+depois, no M2, pro trabalho de correção de deadlock (`ARARA-210`), não como implementação
+desta ADR. Os ingesters de IBGE, TSE e INEP continuam chamando `insertDocument()` num loop
+de 50 chamadas individuais por lote (`Promise.allSettled`) — exatamente o padrão que esta
+ADR identificou como o gargalo, não a solução.
+
+Ou seja: a peça que resolveria isso já existe no código, só não está conectada. Os números
+de throughput medidos aqui (545–557 docs/s) continuam sendo a realidade atual, não uma
+baseline já superada. Fica como ação de acompanhamento explícita, não implementada por
+decisão consciente ao revisar este ADR — trocar os ingesters pra `upsertDocuments()` é
+mudança de produção real, com benchmark próprio pra confirmar o ganho, não algo pra fazer
+de passagem numa revisão de documentação.
+
 ## Related Issues
 - `ARARA-110` (métricas Prometheus, usadas pra medir isso)
 - `ARARA-120` (benchmark que gerou a evidência desta ADR)
