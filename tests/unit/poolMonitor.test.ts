@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isPoolNearCapacity, pool, startPoolMonitor } from '../../src/database/client.js';
+import { logger } from '../../src/observability/logger.js';
 
 describe('pool config (ARARA-211)', () => {
   it('mantém max=20, min=10 e timeout de conexão de 5s', () => {
@@ -42,5 +43,19 @@ describe('startPoolMonitor', () => {
     // clearInterval remove o timer da fila do relógio falso — se `stop` não
     // limpasse o interval de verdade, o timer continuaria agendado
     expect(vi.getTimerCount()).toBeLessThan(before);
+  });
+
+  it('loga o estado do pool a cada intervalo (ARARA-410)', () => {
+    const debugSpy = vi.spyOn(logger, 'debug').mockImplementation(() => undefined);
+    const stop = startPoolMonitor(1_000);
+
+    vi.advanceTimersByTime(1_000);
+
+    expect(debugSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ component: 'database' }),
+      'Estado do pool de conexões',
+    );
+
+    stop();
   });
 });
