@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { redisClient } from '../../src/cache/redis.js';
 import {
   documentsIngestedTotal,
   ingestDurationSeconds,
@@ -100,9 +101,21 @@ describe('search_latency_ms histogram (ARARA-310)', () => {
 });
 
 describe('redis_memory_bytes gauge (ARARA-310)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('reports a positive value read from Redis INFO', async () => {
     const text = await register.metrics();
     expect(text).toContain('# HELP redis_memory_bytes');
     expect(text).toMatch(/redis_memory_bytes \d/);
+  });
+
+  it('cai pra 0 sem lançar quando o Redis está fora do ar (ARARA-410)', async () => {
+    vi.spyOn(redisClient, 'info').mockRejectedValue(new Error('Redis indisponível (simulado)'));
+
+    const text = await register.metrics();
+
+    expect(text).toMatch(/redis_memory_bytes 0/);
   });
 });

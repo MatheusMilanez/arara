@@ -30,6 +30,14 @@ describe('API routes', () => {
     await pool.query('TRUNCATE TABLE documents, datasets RESTART IDENTITY CASCADE');
   });
 
+  describe('GET / (ARARA-410)', () => {
+    it('retorna ok e o nome do serviço', async () => {
+      const res = await request(app.server).get('/');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, service: 'arara' });
+    });
+  });
+
   describe('GET /api/v1/health', () => {
     it('returns 200 with service statuses', async () => {
       const res = await request(app.server).get('/api/v1/health');
@@ -93,6 +101,21 @@ describe('API routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].dataset).toBe('test-source');
+    });
+
+    it('filtra por dataset quando o parâmetro dataset é passado (ARARA-410)', async () => {
+      const datasetA = await insertDataset({ source: 'dataset-a', name: 'Dataset A' });
+      const datasetB = await insertDataset({ source: 'dataset-b', name: 'Dataset B' });
+      await insertDocument({ datasetId: datasetA.id, title: 'Datasetfiltrouniqueterm em A', content: 'x' });
+      await insertDocument({ datasetId: datasetB.id, title: 'Datasetfiltrouniqueterm em B', content: 'x' });
+
+      const res = await request(app.server)
+        .get('/api/v1/search')
+        .query({ q: 'datasetfiltrouniqueterm', dataset: datasetA.id });
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+      expect(res.body.data[0].dataset).toBe('dataset-a');
     });
 
     describe('cache (ARARA-300)', () => {
