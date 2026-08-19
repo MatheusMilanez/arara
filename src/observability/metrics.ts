@@ -1,5 +1,7 @@
 import { Counter, Gauge, Histogram, Registry } from 'prom-client';
+import { redisClient } from '../cache/redis.js';
 import { pool } from '../database/client.js';
+import { logger } from './logger.js';
 
 export const register = new Registry();
 
@@ -59,5 +61,41 @@ new Gauge({
   collect() {
     const total = searchCacheHits + searchCacheMisses;
     this.set(total === 0 ? 0 : searchCacheHits / total);
+  },
+});
+
+// ARARA-310: buckets em ms, não segundos — a latência de busca (cache hit
+// principalmente) fica na casa de 1-100ms, e histogram_quantile em cima de
+// buckets em segundos ficaria com resolução ruim nessa faixa
+export const searchLatencyMs = new Histogram({
+  name: 'search_latency_ms',
+  help: 'Latência da rota de busca, em milissegundos, por resultado de cache (hit/miss)',
+  labelNames: ['cache'] as const,
+  buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500],
+  registers: [register],
+});
+
+// collect() aqui é async — diferente do gauge do pool acima, ler o uso de
+// memória do Redis exige um round-trip (INFO). register.metrics() já dá
+// await em cada collect(), então isso é seguro (ver ARARA-310).
+new Gauge({
+  name: 'redis_memory_bytes',
+  help: 'Memória usada pelo Redis, em bytes (used_memory do INFO memory)',
+  registers: [register],
+  async collect() {
+    try {
+      if (!redisClient.isOpen) {
+        await redisClient.connect();
+      }
+      const info = await redisClient.info('memory');
+      const match = info.match(/^used_memory:(\d+)/m);
+      this.set(match ? Number(match[1]) : 0);
+    } catch (err) {
+      logger.warn(
+        { component: 'metrics', error: err instanceof Error ? err.message : String(err) },
+        'Falha ao ler uso de memória do Redis',
+      );
+      this.set(0);
+    }
   },
 });
