@@ -18,6 +18,17 @@ export default tseslint.config(
     },
   },
   {
+    // scripts do k6 (ARARA-400) rodam num runtime próprio (Goja), com
+    // globals específicos que não existem em Node — __ENV é o único usado
+    // hoje
+    files: ['tests/load/**/*.js'],
+    languageOptions: {
+      globals: {
+        __ENV: 'readonly',
+      },
+    },
+  },
+  {
     ignores: ['dist/', 'node_modules/', 'coverage/'],
   },
 );
