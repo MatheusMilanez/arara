@@ -1,6 +1,7 @@
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { invalidateSearchCache } from '../../src/cache/searchCache.js';
+import { redisClient } from '../../src/cache/redis.js';
 import { buildApp } from '../../src/app.js';
 import { pool } from '../../src/database/client.js';
 import { insertDataset, insertDocument } from '../../src/database/queries.js';
@@ -25,6 +26,7 @@ describe('API routes', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await pool.query('TRUNCATE TABLE documents, datasets RESTART IDENTITY CASCADE');
   });
 
@@ -120,6 +122,24 @@ describe('API routes', () => {
 
         const res = await request(app.server).get('/api/v1/search').query({ q: 'cacheinvalidacaouniqueterm' });
         expect(res.body.total).toBe(2);
+      });
+    });
+
+    describe('chaos: Redis fora do ar (ARARA-401)', () => {
+      it('busca continua funcionando (200, dado do Postgres) mesmo com o Redis indisponível', async () => {
+        const dataset = await insertDataset({ source: 'chaos-source', name: 'Chaos Dataset' });
+        await insertDocument({ datasetId: dataset.id, title: 'Chaosredisuniqueterm achado', content: 'x' });
+
+        // simula o Redis fora do ar sem precisar derrubar o container real —
+        // mesma técnica de falha que searchCache.test.ts já usa pro cache
+        // isolado, aqui provando o mesmo comportamento na rota inteira
+        vi.spyOn(redisClient, 'get').mockRejectedValue(new Error('Redis indisponível (simulado)'));
+        vi.spyOn(redisClient, 'set').mockRejectedValue(new Error('Redis indisponível (simulado)'));
+
+        const res = await request(app.server).get('/api/v1/search').query({ q: 'chaosredisuniqueterm' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.total).toBe(1);
       });
     });
   });
