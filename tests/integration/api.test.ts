@@ -44,6 +44,8 @@ describe('API routes', () => {
       expect(res.headers['content-type']).toContain('text/plain');
       expect(res.text).toContain('# HELP database_pool_connections');
       expect(res.text).toContain('# HELP ingest_duration_seconds');
+      expect(res.text).toContain('# HELP search_latency_ms');
+      expect(res.text).toContain('# HELP redis_memory_bytes');
     });
   });
 

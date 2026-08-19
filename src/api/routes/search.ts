@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getCachedSearch, setCachedSearch } from '../../cache/searchCache.js';
 import { searchDocuments } from '../../database/queries.js';
 import { logger } from '../../observability/logger.js';
-import { recordSearchCacheHit, recordSearchCacheMiss } from '../../observability/metrics.js';
+import { recordSearchCacheHit, recordSearchCacheMiss, searchLatencyMs } from '../../observability/metrics.js';
 
 const searchQuerySchema = z.object({
   q: z.string().min(1).max(500),
@@ -46,10 +46,9 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
     const cached = await getCachedSearch<SearchResponseBody>(cacheParams);
     if (cached) {
       recordSearchCacheHit();
-      logger.info(
-        { component: 'search', q, limit, offset, cache: 'hit', durationMs: Math.round(performance.now() - start) },
-        'Search executed',
-      );
+      const durationMs = Math.round(performance.now() - start);
+      searchLatencyMs.observe({ cache: 'hit' }, durationMs);
+      logger.info({ component: 'search', q, limit, offset, cache: 'hit', durationMs }, 'Search executed');
       return cached;
     }
     recordSearchCacheMiss();
@@ -57,6 +56,7 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
     const result = await searchDocuments(q, { limit, offset, ...(dataset ? { datasetId: dataset } : {}) });
 
     const durationMs = Math.round(performance.now() - start);
+    searchLatencyMs.observe({ cache: 'miss' }, durationMs);
     logger.info({ component: 'search', q, limit, offset, total: result.total, cache: 'miss', durationMs }, 'Search executed');
 
     const body: SearchResponseBody = {

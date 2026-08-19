@@ -4,6 +4,7 @@ import {
   ingestDurationSeconds,
   ingestErrorsTotal,
   register,
+  searchLatencyMs,
 } from '../../src/observability/metrics.js';
 import { Ingester } from '../../src/services/ingester/index.js';
 import type { IngestionStrategy, RawData } from '../../src/services/ingester/types.js';
@@ -81,5 +82,27 @@ describe('database_pool_connections gauge', () => {
     const text = await register.metrics();
     expect(text).toContain('# HELP database_pool_connections');
     expect(text).toMatch(/database_pool_connections\{state="total"\} \d/);
+  });
+});
+
+describe('search_latency_ms histogram (ARARA-310)', () => {
+  it('records an observation per label', async () => {
+    searchLatencyMs.observe({ cache: 'hit' }, 3);
+    searchLatencyMs.observe({ cache: 'miss' }, 42);
+
+    const data = await searchLatencyMs.get();
+    const hitCount = data.values.find((v) => v.metricName?.endsWith('_count') && v.labels['cache'] === 'hit')?.value;
+    const missCount = data.values.find((v) => v.metricName?.endsWith('_count') && v.labels['cache'] === 'miss')?.value;
+
+    expect(hitCount).toBeGreaterThanOrEqual(1);
+    expect(missCount).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('redis_memory_bytes gauge (ARARA-310)', () => {
+  it('reports a positive value read from Redis INFO', async () => {
+    const text = await register.metrics();
+    expect(text).toContain('# HELP redis_memory_bytes');
+    expect(text).toMatch(/redis_memory_bytes \d/);
   });
 });
