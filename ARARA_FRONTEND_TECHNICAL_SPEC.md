@@ -129,8 +129,7 @@ arara/
 │   ├── lib/
 │   │   └── api.ts           # cliente fetch tipado (importa src/types/api.ts)
 │   ├── public/
-│   ├── tailwind.config.ts
-│   ├── next.config.ts
+│   ├── next.config.ts         # inclui turbopack.root (lockfile próprio, não workspace)
 │   ├── package.json          # próprio — não é npm workspace com a raiz
 │   └── tsconfig.json
 ├── docker-compose.yml        # sem mudança — frontend não precisa de container próprio em dev
@@ -145,24 +144,44 @@ apps não compartilham lógica de execução, só um contrato de dados).
 
 ---
 
-## 4. Design tokens (Tailwind), direto de `docs/design/VISUAL_IDENTITY.md`
+## 4. Design tokens (Tailwind v4, CSS-first), direto de `docs/design/VISUAL_IDENTITY.md`
 
-```ts
-// tailwind.config.ts
-colors: {
-  'arara-blue': '#0B1F33',      // cor principal — logo, nav, botões primários
-  'arara-yellow': '#F5C518',    // accent — nunca cor dominante de área grande
-  'arara-green': '#1E8E5A',     // status positivo, uso restrito
-  'arara-bg': '#FAFAF7',        // fundo (off-white, não branco puro)
-  'arara-text': '#111111',
-  'arara-text-secondary': '#6B7280',
-  'arara-border': '#E5E7EB',
+**Atualizado (ARARA-702):** `create-next-app@latest` instalou Next.js 16 e Tailwind v4 —
+decisão registrada em ADR-0007 (a spec original previa Next 15; mantivemos a versão mais
+recente por ser projeto novo, sem código legado a migrar). Tailwind v4 não usa
+`tailwind.config.ts` pra tokens simples — a configuração é CSS-first, via `@theme` em
+`app/globals.css`:
+
+```css
+/* app/globals.css */
+:root {
+  --color-arara-blue: #0b1f33;      /* cor principal — logo, nav, botões primários */
+  --color-arara-yellow: #f5c518;    /* accent — nunca cor dominante de área grande */
+  --color-arara-green: #1e8e5a;     /* status positivo, uso restrito */
+  --color-arara-bg: #fafaf7;        /* fundo (off-white, não branco puro) */
+  --color-arara-text: #111111;
+  --color-arara-text-secondary: #6b7280;
+  --color-arara-border: #e5e7eb;
+}
+
+@theme inline {
+  --color-arara-blue: var(--color-arara-blue);
+  /* ...demais tokens, mesmo padrão */
+  --font-sans: var(--font-inter);
 }
 ```
+
+Isso gera as classes utilitárias automaticamente (`bg-arara-blue`, `text-arara-yellow`
+etc.) — sem objeto `colors` em arquivo `.ts`. Content detection também é automática no v4
+(sem array `content` pra manter atualizado).
 
 Fonte: **Inter**, via `next/font/google` (self-hosted pelo Next, sem request externo em
 runtime). Hierarquia de tamanho já definida no VISUAL_IDENTITY (seção 6) — logo 48-64px,
 título principal 32-40px, texto 15-17px, metadados 12-14px.
+
+Sem dark mode: o VISUAL_IDENTITY.md não prevê tema escuro (fundo off-white é a identidade,
+não um "light mode" com alternativa) — o boilerplate padrão do Next (`prefers-color-scheme:
+dark` trocando as cores) foi removido de propósito.
 
 Regra de design do próprio documento (seção 18), vale citar porque é a régua de decisão
 mais reutilizável do brief inteiro: **não adicionar interface só porque existe

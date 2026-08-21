@@ -26,6 +26,9 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 
+# Claude Code — permissões locais acumuladas na sessão, não config do projeto
+.claude/settings.local.json
+
 # Docker
 docker-compose.override.yml
 

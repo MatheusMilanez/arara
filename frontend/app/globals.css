@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Tokens de docs/design/VISUAL_IDENTITY.md — únicos hex permitidos na UI
+   (ver ARARA_FRONTEND_SKILL.md, checklist "design system") */
+:root {
+  --color-arara-blue: #0b1f33;
+  --color-arara-yellow: #f5c518;
+  --color-arara-green: #1e8e5a;
+  --color-arara-bg: #fafaf7;
+  --color-arara-text: #111111;
+  --color-arara-text-secondary: #6b7280;
+  --color-arara-border: #e5e7eb;
+}
+
+@theme inline {
+  --color-arara-blue: var(--color-arara-blue);
+  --color-arara-yellow: var(--color-arara-yellow);
+  --color-arara-green: var(--color-arara-green);
+  --color-arara-bg: var(--color-arara-bg);
+  --color-arara-text: var(--color-arara-text);
+  --color-arara-text-secondary: var(--color-arara-text-secondary);
+  --color-arara-border: var(--color-arara-border);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--color-arara-bg);
+  color: var(--color-arara-text);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
