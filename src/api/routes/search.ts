@@ -4,6 +4,7 @@ import { getCachedSearch, setCachedSearch } from '../../cache/searchCache.js';
 import { searchDocuments } from '../../database/queries.js';
 import { logger } from '../../observability/logger.js';
 import { recordSearchCacheHit, recordSearchCacheMiss, searchLatencyMs } from '../../observability/metrics.js';
+import type { SearchResponseBody } from '../../types/api.js';
 
 const searchQuerySchema = z.object({
   q: z.string().min(1).max(500),
@@ -11,21 +12,6 @@ const searchQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
   dataset: z.string().optional(),
 });
-
-interface SearchResponseBody {
-  ok: true;
-  data: Array<{
-    id: string;
-    title: string | null;
-    dataset: string;
-    relevance: number;
-    metadata: Record<string, unknown> | null;
-    source_url: string | null;
-  }>;
-  total: number;
-  limit: number;
-  offset: number;
-}
 
 export async function searchRoutes(app: FastifyInstance): Promise<void> {
   app.get('/search', async (request, reply) => {
