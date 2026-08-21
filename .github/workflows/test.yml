@@ -37,3 +37,27 @@ jobs:
       # pra produção — não faz sentido travar o CI por causa delas
       - run: npm run audit
       - run: npm test -- --coverage
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      # LayoutProps/PageProps são tipos gerados pelo Next (next dev/build/
+      # typegen) — sem isso, tsc --noEmit falha do zero achando que o tipo
+      # não existe (só existia localmente porque o build já tinha rodado)
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
