@@ -23,6 +23,7 @@
     "ingest:ibge": "tsx src/services/ingester/datasources/ibgeMunicipios.ts",
     "ingest:tse": "tsx src/services/ingester/datasources/tseCandidatos.ts",
     "ingest:inep": "tsx src/services/ingester/datasources/inepEscolas.ts",
+    "ingest:camara": "tsx src/services/ingester/datasources/camaraDeputados.ts",
     "ingest:all": "tsx src/services/ingester/runAll.ts"
   },
   "dependencies": {
