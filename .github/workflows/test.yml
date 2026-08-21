@@ -1,10 +1,20 @@
 name: CI
 
+# pull_request (nunca pull_request_target): PR de fork roda com o token e os
+# secrets do PR, não do repositório-base. pull_request_target faria o oposto —
+# daria a um workflow disparado por PR de estranho acesso a secrets do
+# repositório. Não trocar isso sem entender essa diferença (ARARA-803).
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+# mínimo necessário pros dois jobs (só leem código e rodam testes) — qualquer
+# workflow que precise de mais (ex: abrir issue, no ARARA-822) declara o
+# próprio permissions, não herda daqui
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -22,9 +32,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -44,9 +54,9 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
