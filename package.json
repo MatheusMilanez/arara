@@ -26,6 +26,7 @@
     "ingest:all": "tsx src/services/ingester/runAll.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
     "adm-zip": "^0.6.0",
     "csv-parse": "^7.0.2",
     "dotenv": "^17.4.2",

@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { listDatasets } from '../../database/queries.js';
+import type { DatasetsResponseBody } from '../../types/api.js';
 
 export async function datasetsRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/datasets', async () => {
+  app.get('/datasets', async (): Promise<DatasetsResponseBody> => {
     const datasets = await listDatasets();
 
     return {

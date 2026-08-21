@@ -47,6 +47,39 @@ describe('API routes', () => {
     });
   });
 
+  describe('CORS (ARARA-700)', () => {
+    it('sem FRONTEND_ORIGIN configurada, nenhuma origem é permitida (falha fechada)', async () => {
+      const res = await request(app.server).get('/api/v1/health').set('Origin', 'http://localhost:3002');
+      expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    });
+
+    describe('com FRONTEND_ORIGIN configurada', () => {
+      const ORIGIN = 'http://localhost:3002';
+      let corsApp: Awaited<ReturnType<typeof buildApp>>;
+
+      beforeAll(async () => {
+        process.env.FRONTEND_ORIGIN = ORIGIN;
+        corsApp = await buildApp();
+        await corsApp.ready();
+      });
+
+      afterAll(async () => {
+        delete process.env.FRONTEND_ORIGIN;
+        await corsApp.close();
+      });
+
+      it('permite a origem que está na allowlist', async () => {
+        const res = await request(corsApp.server).get('/api/v1/health').set('Origin', ORIGIN);
+        expect(res.headers['access-control-allow-origin']).toBe(ORIGIN);
+      });
+
+      it('bloqueia uma origem que não está na allowlist', async () => {
+        const res = await request(corsApp.server).get('/api/v1/health').set('Origin', 'http://evil.example.com');
+        expect(res.headers['access-control-allow-origin']).toBeUndefined();
+      });
+    });
+  });
+
   describe('GET /metrics', () => {
     it('returns Prometheus-formatted metrics', async () => {
       const res = await request(app.server).get('/metrics');

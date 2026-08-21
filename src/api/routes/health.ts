@@ -1,13 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { checkRedisHealth, type CacheHealth } from '../../cache/redis.js';
 import { checkDatabaseHealth, type DatabaseHealth } from '../../database/client.js';
+import type { HealthResponseBody } from '../../types/api.js';
 
 // separado do handler HTTP pra poder testar os dois branches (200/503) sem
 // precisar derrubar Postgres ou Redis de verdade — só decisão pura
 export function buildHealthResponse(
   database: DatabaseHealth,
   redis: CacheHealth,
-): { statusCode: 200 | 503; body: Record<string, unknown> } {
+): { statusCode: 200 | 503; body: HealthResponseBody } {
   const allOk = database.status === 'ok' && redis.status === 'ok';
 
   return {
