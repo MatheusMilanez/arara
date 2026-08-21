@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { closePool } from '../../database/client.js';
 import { logger } from '../../observability/logger.js';
+import { run as runCamara } from './datasources/camaraDeputados.js';
 import { run as runIbge } from './datasources/ibgeMunicipios.js';
 import { run as runInep } from './datasources/inepEscolas.js';
 import { run as runTse } from './datasources/tseCandidatos.js';
@@ -14,6 +15,7 @@ const DATASOURCES: Datasource[] = [
   { name: 'ibge-municipios', run: runIbge },
   { name: 'tse-candidatos-2024', run: runTse },
   { name: 'inep-escolas-2025', run: runInep },
+  { name: 'camara-proposicoes', run: runCamara },
 ];
 
 // Promise.allSettled (não Promise.all) de propósito: uma fonte falhando não

@@ -118,6 +118,10 @@ function mapRow(row: DocumentRow): Document {
 
 export interface InsertDocumentInput {
   datasetId: string;
+  // opcional: só datasources com chave natural real (ex: camara-proposicoes)
+  // preenchem isso, pra permitir upsertDocuments() em vez do padrão de
+  // resync completo que datasources sem chave natural (IBGE/TSE/INEP) usam
+  externalId?: string;
   title?: string | null;
   content?: string | null;
   metadata?: Record<string, unknown> | null;
