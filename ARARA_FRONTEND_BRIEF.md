@@ -180,9 +180,13 @@ Detalhado ticket por ticket em `ARARA_FRONTEND_ROADMAP.md`.
 
 ## 10. Stack (Decidido)
 
-**Next.js 15 (App Router) + TypeScript + Tailwind CSS**, confirmado com você em
-2026-08-19. Motivo, na íntegra, vai pro `ARARA_FRONTEND_TECHNICAL_SPEC.md` seção 1 — aqui
-o resumo:
+**Next.js (App Router) + TypeScript + Tailwind CSS**, confirmado com você em 2026-08-19.
+Motivo, na íntegra, vai pro `ARARA_FRONTEND_TECHNICAL_SPEC.md` seção 1 — aqui o resumo:
+
+> **Atualização (ARARA-702, 2026-08-21):** a versão do Next citada aqui era a 15, a mais
+> recente na época deste brief. O scaffold real (`create-next-app@latest`) instalou a 16 —
+> confirmado com você que ficamos na mais recente, por ser projeto novo sem código a
+> migrar. Decisão registrada em ADR-0007.
 
 - SSR real importa pra um produto de busca que quer ser encontrável — um SPA puro deixaria
   as próprias páginas de resultado invisíveis pro Google, o que briga direto com a visão

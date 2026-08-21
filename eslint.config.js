@@ -29,6 +29,8 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'coverage/'],
+    // frontend/ é um projeto npm próprio (package.json, node_modules e
+    // eslint.config.mjs independentes) — tem o próprio lint, não o da raiz
+    ignores: ['dist/', 'node_modules/', 'coverage/', 'frontend/'],
   },
 );
