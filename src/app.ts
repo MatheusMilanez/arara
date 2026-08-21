@@ -17,6 +17,10 @@ function parseAllowedOrigins(): string[] {
     .filter((origin) => origin.length > 0);
 }
 
+// eslint-error-de-propósito: variável não usada, só pra provar que a branch
+// protection bloqueia merge com CI vermelho (ARARA-803) — nunca mergear isto
+const _verificacaoDeliberada = 1;
+
 export async function buildApp() {
   const app = Fastify({ loggerInstance: logger });
 
