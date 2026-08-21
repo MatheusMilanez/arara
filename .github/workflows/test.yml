@@ -53,6 +53,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
+      # LayoutProps/PageProps são tipos gerados pelo Next (next dev/build/
+      # typegen) — sem isso, tsc --noEmit falha do zero achando que o tipo
+      # não existe (só existia localmente porque o build já tinha rodado)
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
